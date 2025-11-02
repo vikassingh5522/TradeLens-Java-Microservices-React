@@ -5,7 +5,6 @@ import com.tradelens.auth.service.AuthService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
 import java.util.Map;
 
 @RestController
@@ -31,7 +30,15 @@ public class AuthController {
 
     @GetMapping("/validate")
     public ResponseEntity<?> validate() {
-        // If request reaches here, JwtFilter already authenticated user
         return ResponseEntity.ok(Map.of("valid", true));
+    }
+
+    // ✅ Add this
+    @GetMapping("/health")
+    public ResponseEntity<?> healthCheck() {
+        return ResponseEntity.ok(Map.of(
+                "status", "UP",
+                "service", "auth-service"
+        ));
     }
 }
