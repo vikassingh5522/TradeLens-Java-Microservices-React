@@ -23,7 +23,6 @@ public class PortfolioService {
         tx.setTimestamp(Instant.now());
         Transaction saved = transactionRepository.save(tx);
 
-
         Holding holding = holdingRepository.findByUserIdAndSymbol(tx.getUserId(), tx.getSymbol())
                 .orElse(Holding.builder()
                         .userId(tx.getUserId())
@@ -32,7 +31,7 @@ public class PortfolioService {
                         .avgPrice(0.0)
                         .build());
 
-
+        // ✅ BUY logic
         if ("BUY".equalsIgnoreCase(tx.getType())) {
             int newQty = holding.getQuantity() + tx.getQuantity();
             double totalCost = (holding.getAvgPrice() * holding.getQuantity()) + (tx.getPrice() * tx.getQuantity());
@@ -41,6 +40,7 @@ public class PortfolioService {
             holding.setAvgPrice(newAvg);
         }
 
+        // ✅ SELL logic
         else if ("SELL".equalsIgnoreCase(tx.getType())) {
             int newQty = Math.max(0, holding.getQuantity() - tx.getQuantity());
             holding.setQuantity(newQty);

@@ -13,17 +13,17 @@ public class GatewayConfig {
     public RouteLocator customRoutes(RouteLocatorBuilder builder, LoggingFilter loggingFilter) {
         return builder.routes()
 
-                // ✅ Auth Service — working fine
+                //  Auth Service
                 .route("auth_route", r -> r.path("/auth/**")
                         .filters(f -> f.filter(loggingFilter)) // keep as it is
                         .uri("http://localhost:8081"))
 
-                // 💼 Portfolio Service — FIXED: removed stripPrefix(1)
+                // Portfolio Service
                 .route("portfolio_route", r -> r.path("/portfolio/**")
                         .filters(f -> f.filter(loggingFilter)) // now forwards full /portfolio path
                         .uri("http://localhost:8082"))
 
-                // 📊 Market Data Service — FIXED: removed stripPrefix(1)
+                //  Market Data Service
                 .route("marketdata_route", r -> r.path("/marketdata/**")
                         .filters(f -> f.filter(loggingFilter))
                         .uri("http://localhost:8083"))

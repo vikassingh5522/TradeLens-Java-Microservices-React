@@ -11,11 +11,6 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
-import org.springframework.web.cors.CorsConfiguration;
-import org.springframework.web.cors.CorsConfigurationSource;
-import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
-
-import java.util.List;
 
 @Configuration
 @EnableWebSecurity
@@ -27,35 +22,27 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
 
-        System.out.println(" Initializing security filter chain...");
+        System.out.println("Initializing security filter chain...");
 
         http
-                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+                // 🚫 Remove explicit .cors(), Gateway already handles it
                 .csrf(csrf -> csrf.disable())
-
                 .authorizeHttpRequests(auth -> auth
-
                         .requestMatchers(
                                 "/portfolio/public/**",
-                                "/portfolio/add",     // <- TEMPORARY open endpoint
+                                "/portfolio/add",  // temporary open endpoint
                                 "/actuator/**",
                                 "/error"
                         ).permitAll()
-
-                        // Require authentication for other portfolio routes
                         .requestMatchers("/portfolio/**").authenticated()
-
                         .anyRequest().permitAll()
                 )
-
                 .sessionManagement(sess ->
                         sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 )
-
-
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
 
-        System.out.println("  Security chain configured successfully.");
+        System.out.println("Security chain configured successfully.");
 
         return http.build();
     }
@@ -65,16 +52,5 @@ public class SecurityConfig {
         return config.getAuthenticationManager();
     }
 
-    @Bean
-    public CorsConfigurationSource corsConfigurationSource() {
-        CorsConfiguration config = new CorsConfiguration();
-        config.setAllowedOrigins(List.of("http://localhost:3000", "http://localhost:8082"));
-        config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-        config.setAllowedHeaders(List.of("*"));
-        config.setAllowCredentials(true);
-
-        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**", config);
-        return source;
-    }
+    // 🚫 Remove this entire CorsConfigurationSource bean
 }
