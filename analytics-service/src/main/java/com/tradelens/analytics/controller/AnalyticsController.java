@@ -6,8 +6,11 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+import java.util.Map;
+
 @RestController
-@RequestMapping("/analytics")
+@RequestMapping("")
 @RequiredArgsConstructor
 public class AnalyticsController {
 
@@ -15,12 +18,18 @@ public class AnalyticsController {
 
     @GetMapping("/health")
     public ResponseEntity<String> health() {
-        return ResponseEntity.ok("✅ Analytics service is up (port default).");
+        return ResponseEntity.ok("✅ Analytics service is up and running on port 8084!");
     }
 
+    /** 🔹 Get latest risk snapshot for a user */
     @GetMapping("/risk/{userId}")
     public ResponseEntity<RiskReport> getRiskReport(@PathVariable Long userId) {
-        RiskReport report = riskEngineService.getRiskReport(userId);
-        return ResponseEntity.ok(report);
+        return ResponseEntity.ok(riskEngineService.getRiskReport(userId));
+    }
+
+    /** 🔹 Get last 7-day exposure history */
+    @GetMapping("/history/{userId}")
+    public ResponseEntity<List<Map<String, Object>>> getRiskHistory(@PathVariable Long userId) {
+        return ResponseEntity.ok(riskEngineService.getHistoricalRisk(userId));
     }
 }

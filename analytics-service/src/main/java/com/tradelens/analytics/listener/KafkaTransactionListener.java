@@ -16,10 +16,6 @@ public class KafkaTransactionListener {
     private final RiskEngineService riskEngineService;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
-    /**
-     * Listens to serialized JSON messages (String) on 'portfolio-transactions' topic.
-     * We parse them into TransactionEvent and update risk engine.
-     */
     @KafkaListener(topics = "portfolio-transactions", groupId = "analytics-group")
     public void onMessage(String message) {
         try {

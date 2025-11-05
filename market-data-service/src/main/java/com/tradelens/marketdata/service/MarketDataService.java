@@ -1,5 +1,6 @@
 package com.tradelens.marketdata.service;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.tradelens.marketdata.model.PriceSnapshot;
 import com.tradelens.marketdata.repository.PriceSnapshotRepository;
 import lombok.RequiredArgsConstructor;
@@ -7,6 +8,7 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
+import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.TimeUnit;
 
@@ -16,6 +18,7 @@ public class MarketDataService {
 
     private final RedisTemplate<String, Object> redisTemplate;
     private final PriceSnapshotRepository priceSnapshotRepository;
+    private final ObjectMapper objectMapper = new ObjectMapper();
     private final Random random = new Random();
 
     // 🎨 ANSI color codes for beautiful console output
@@ -27,11 +30,23 @@ public class MarketDataService {
     public PriceSnapshot getPrice(String symbol) {
         String cacheKey = "PRICE_" + symbol.toUpperCase();
 
-        // ✅ 1. Check Redis Cache
-        PriceSnapshot cached = (PriceSnapshot) redisTemplate.opsForValue().get(cacheKey);
-        if (cached != null) {
-            System.out.println(GREEN + "📦 [CACHE HIT] " + symbol + " price = " + cached.getPrice() + RESET);
-            return cached;
+        try {
+            // ✅ 1. Check Redis Cache safely
+            Object cachedObj = redisTemplate.opsForValue().get(cacheKey);
+            if (cachedObj != null) {
+                PriceSnapshot cached;
+                if (cachedObj instanceof Map) {
+                    // Convert LinkedHashMap -> PriceSnapshot (fix for ClassCastException)
+                    cached = objectMapper.convertValue(cachedObj, PriceSnapshot.class);
+                } else {
+                    cached = (PriceSnapshot) cachedObj;
+                }
+
+                System.out.println(GREEN + "📦 [CACHE HIT] " + symbol + " price = " + cached.getPrice() + RESET);
+                return cached;
+            }
+        } catch (Exception e) {
+            System.err.println("⚠️ Redis deserialization issue: " + e.getMessage());
         }
 
         // ✅ 2. Generate Mock Price (later can use real API)
