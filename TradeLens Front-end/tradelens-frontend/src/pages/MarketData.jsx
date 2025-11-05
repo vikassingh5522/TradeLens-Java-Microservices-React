@@ -2,6 +2,16 @@ import { useState, useEffect } from "react";
 import { getPrice } from "../api/marketDataApi";
 import Navbar from "../components/Navbar";
 import Sidebar from "../Components/Sidebar";
+import { motion, AnimatePresence } from "framer-motion";
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ResponsiveContainer,
+  CartesianGrid,
+} from "recharts";
 
 export default function MarketData() {
   const [symbol, setSymbol] = useState("");
@@ -16,6 +26,9 @@ export default function MarketData() {
   const [filter, setFilter] = useState("");
   const [lastPrice, setLastPrice] = useState(null);
   const [priceChange, setPriceChange] = useState(null);
+
+  // Random finance background image for better visual impact
+  const bannerImage = `https://source.unsplash.com/1600x400/?finance,stocks,market`;
 
   useEffect(() => {
     localStorage.setItem("marketHistory", JSON.stringify(history));
@@ -71,26 +84,55 @@ export default function MarketData() {
 
   return (
     <div className="flex h-screen overflow-hidden bg-gray-50">
-      {/* Fixed Sidebar */}
+      {/* Sidebar */}
       <div className="w-64 fixed h-full z-40">
         <Sidebar />
       </div>
 
-      {/* Scrollable main content */}
+      {/* Main content */}
       <div className="flex-1 ml-64 flex flex-col overflow-y-auto">
         <Navbar />
 
+        {/* 🎨 Header Banner */}
+        <div
+          className="relative h-56 w-full bg-cover bg-center shadow-md"
+          style={{ backgroundImage: `url(${bannerImage})` }}
+        >
+          <div className="absolute inset-0 bg-black/40 flex flex-col justify-center items-center text-white text-center">
+            <motion.h1
+              initial={{ opacity: 0, y: -20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8 }}
+              className="text-3xl md:text-4xl font-extrabold tracking-wide"
+            >
+              🌎 Live Market Data Center
+            </motion.h1>
+            <motion.p
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.3 }}
+              className="text-sm md:text-base mt-2 text-gray-200"
+            >
+              Real-time insights and analytics from global stock exchanges
+            </motion.p>
+          </div>
+        </div>
+
         <main className="p-6 bg-gradient-to-br from-gray-50 to-gray-100 flex-1 min-h-screen">
-          <h2 className="text-3xl font-bold mb-6 text-gray-800 flex items-center gap-2">
+          <motion.h2
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="text-3xl font-bold mb-6 text-gray-800 flex items-center gap-2"
+          >
             📊 Market Data Dashboard
             {live && (
               <span className="text-green-600 text-sm font-semibold animate-pulse">
                 🔴 LIVE MODE
               </span>
             )}
-          </h2>
+          </motion.h2>
 
-          {/* ---------- Search & Controls ---------- */}
+          {/* 🔍 Search & Controls */}
           <div className="flex flex-wrap items-center gap-3 mb-6">
             <input
               type="text"
@@ -132,45 +174,84 @@ export default function MarketData() {
             </button>
           </div>
 
-          {/* ---------- Error Message ---------- */}
-          {error && <p className="text-red-600 font-medium mb-4">❌ {error}</p>}
-
-          {/* ---------- Current Price Card ---------- */}
-          {data && (
-            <div
-              className={`transition border border-gray-200 bg-white rounded-2xl p-6 shadow-md max-w-lg mb-8 transform duration-300 ${
-                priceChange === "up"
-                  ? "ring-2 ring-green-400 scale-[1.01]"
-                  : priceChange === "down"
-                  ? "ring-2 ring-red-400 scale-[1.01]"
-                  : ""
-              }`}
+          {/* ⚠️ Error Message */}
+          {error && (
+            <motion.p
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="text-red-600 font-medium mb-4"
             >
-              <h3 className="text-2xl font-bold text-gray-900 mb-2 flex items-center gap-2">
-                {data.symbol}
-                {priceChange === "up" && (
-                  <span className="text-green-600 text-lg">▲</span>
-                )}
-                {priceChange === "down" && (
-                  <span className="text-red-600 text-lg">▼</span>
-                )}
+              ❌ {error}
+            </motion.p>
+          )}
+
+          {/* 💵 Current Price Card */}
+          <AnimatePresence>
+            {data && (
+              <motion.div
+                key={data.symbol}
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.4 }}
+                className={`transition border border-gray-200 bg-white rounded-2xl p-6 shadow-md max-w-lg mb-8 transform duration-300 ${
+                  priceChange === "up"
+                    ? "ring-2 ring-green-400 scale-[1.01]"
+                    : priceChange === "down"
+                    ? "ring-2 ring-red-400 scale-[1.01]"
+                    : ""
+                }`}
+              >
+                <h3 className="text-2xl font-bold text-gray-900 mb-2 flex items-center gap-2">
+                  {data.symbol}
+                  {priceChange === "up" && (
+                    <span className="text-green-600 text-lg">▲</span>
+                  )}
+                  {priceChange === "down" && (
+                    <span className="text-red-600 text-lg">▼</span>
+                  )}
+                </h3>
+                <p className="text-3xl text-blue-700 font-bold">
+                  💵 ${data.price?.toFixed(2)}
+                </p>
+                <p className="text-sm text-gray-600 mt-2">
+                  ⏱ Updated:{" "}
+                  {new Date(data.timestamp).toLocaleString("en-US", {
+                    hour12: true,
+                  })}
+                </p>
+                <p className="text-xs text-gray-500 mt-1 italic">
+                  Total fetches: {history.length}
+                </p>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* 📈 Mini Line Chart */}
+          {filteredHistory.length > 1 && (
+            <div className="bg-white p-4 rounded-xl shadow-md mb-8">
+              <h3 className="text-lg font-semibold mb-3 text-gray-700">
+                📈 Recent Price Trend
               </h3>
-              <p className="text-3xl text-blue-700 font-bold">
-                💵 ${data.price?.toFixed(2)}
-              </p>
-              <p className="text-sm text-gray-600 mt-2">
-                ⏱ Updated:{" "}
-                {new Date(data.timestamp).toLocaleString("en-US", {
-                  hour12: true,
-                })}
-              </p>
-              <p className="text-xs text-gray-500 mt-1 italic">
-                Total fetches: {history.length}
-              </p>
+              <ResponsiveContainer width="100%" height={250}>
+                <LineChart data={[...filteredHistory].reverse()}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="fetchedAt" hide />
+                  <YAxis domain={["auto", "auto"]} />
+                  <Tooltip />
+                  <Line
+                    type="monotone"
+                    dataKey="price"
+                    stroke="#2563eb"
+                    strokeWidth={2}
+                    dot={{ r: 3 }}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
             </div>
           )}
 
-          {/* ---------- History Filter ---------- */}
+          {/* 🔍 Filter and History Table */}
           {history.length > 0 && (
             <div className="mb-4 flex justify-between items-center flex-wrap">
               <h3 className="text-lg font-semibold text-gray-700">
@@ -186,9 +267,13 @@ export default function MarketData() {
             </div>
           )}
 
-          {/* ---------- Price History Table ---------- */}
           {filteredHistory.length > 0 && (
-            <div className="overflow-x-auto bg-white rounded-lg shadow-md border border-gray-200">
+            <motion.div
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6 }}
+              className="overflow-x-auto bg-white rounded-lg shadow-md border border-gray-200"
+            >
               <table className="min-w-full">
                 <thead className="bg-blue-100">
                   <tr>
@@ -228,12 +313,12 @@ export default function MarketData() {
                   ))}
                 </tbody>
               </table>
-            </div>
+            </motion.div>
           )}
 
           {!data && !error && !loading && history.length === 0 && (
-            <p className="text-gray-500 italic">
-              Enter a stock symbol and click "Get Price" to fetch live data.
+            <p className="text-gray-500 italic text-center mt-10">
+              Enter a stock symbol and click <b>"Get Price"</b> to fetch live data.
             </p>
           )}
         </main>

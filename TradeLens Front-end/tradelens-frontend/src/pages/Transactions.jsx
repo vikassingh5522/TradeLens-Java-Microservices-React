@@ -3,9 +3,18 @@ import { addTransaction, getHoldings } from "../api/portfolioApi";
 // import { getLivePrice } from "../api/marketApi";
 import { AuthContext } from "../context/AuthContext";
 import Navbar from "../components/Navbar";
-import Sidebar from "../Components/Sidebar";
+import Sidebar from "../components/Sidebar";
 import axios from "axios";
 import { toast, ToastContainer } from "react-toastify";
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  Tooltip,
+  CartesianGrid,
+  ResponsiveContainer,
+} from "recharts";
 
 export default function Transactions() {
   const { token } = useContext(AuthContext);
@@ -19,37 +28,58 @@ export default function Transactions() {
   const [transactions, setTransactions] = useState([]);
   const [totalValue, setTotalValue] = useState(0);
   const [totalProfit, setTotalProfit] = useState(0);
+  const [portfolioHistory, setPortfolioHistory] = useState([]);
   const [loading, setLoading] = useState(false);
 
+  /** 🔹 Fetch Holdings and Calculate Live Profit/Loss */
   const fetchHoldings = async () => {
     try {
       const res = await getHoldings(token);
       const data = res.data || [];
 
-      // Fetch live market prices for each symbol
       const updated = await Promise.all(
         data.map(async (h) => {
           try {
-            // const livePrice = await getLivePrice(h.symbol);
-            const livePrice = h.avgPrice; // fallback example
+            // Simulate live price ±5%
+            const livePrice =
+              h.avgPrice * (1 + (Math.random() * 0.1 - 0.05));
+
             const currentPrice = livePrice || h.avgPrice;
             const totalVal = currentPrice * h.quantity;
             const profit = (currentPrice - h.avgPrice) * h.quantity;
+
             return { ...h, currentPrice, totalVal, profit };
           } catch {
-            return { ...h, currentPrice: h.avgPrice, totalVal: h.avgPrice * h.quantity, profit: 0 };
+            return {
+              ...h,
+              currentPrice: h.avgPrice,
+              totalVal: h.avgPrice * h.quantity,
+              profit: 0,
+            };
           }
         })
       );
 
       setHoldings(updated);
-      setTotalValue(updated.reduce((sum, h) => sum + h.totalVal, 0));
-      setTotalProfit(updated.reduce((sum, h) => sum + h.profit, 0));
+
+      // ✅ Totals
+      const totalVal = updated.reduce((sum, h) => sum + (h.totalVal || 0), 0);
+      const profitVal = updated.reduce((sum, h) => sum + (h.profit || 0), 0);
+
+      setTotalValue(totalVal);
+      setTotalProfit(profitVal);
+
+      // ✅ Append to chart history
+      setPortfolioHistory((prev) => [
+        ...prev.slice(-19),
+        { time: new Date().toLocaleTimeString(), value: totalVal },
+      ]);
     } catch (err) {
       console.error("❌ Error fetching holdings:", err);
     }
   };
 
+  /** 🔹 Fetch Transaction History */
   const fetchTransactions = async () => {
     try {
       const res = await axios.get("http://localhost:8080/portfolio/transactions", {
@@ -69,6 +99,7 @@ export default function Transactions() {
     fetchTransactions();
   }, []);
 
+  /** 🔹 Add a New Transaction */
   const handleAdd = async () => {
     if (!form.symbol || !form.quantity || !form.price) {
       toast.error("⚠️ Please fill in all fields before submitting.");
@@ -130,6 +161,38 @@ export default function Transactions() {
               </p>
             </div>
           </div>
+
+          {/* 📈 Portfolio Value Chart */}
+          {portfolioHistory.length > 0 && (
+            <div className="bg-white p-4 rounded-xl shadow mb-8">
+              <h3 className="text-lg font-semibold mb-3 text-gray-700">
+                📉 Portfolio Value Trend
+              </h3>
+              <ResponsiveContainer width="100%" height={300}>
+                <LineChart data={portfolioHistory}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="time" />
+                  <YAxis />
+                  <Tooltip />
+                  <Line
+                    type="monotone"
+                    dataKey="value"
+                    stroke="#2563eb"
+                    strokeWidth={2}
+                    dot={false}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          )}
+
+          {/* Refresh Button for Testing Live Price Changes */}
+          <button
+            onClick={fetchHoldings}
+            className="mb-6 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold shadow"
+          >
+            🔄 Refresh Live Prices
+          </button>
 
           {/* Add Transaction Form */}
           <h3 className="text-xl font-semibold mb-4">Add Transaction</h3>

@@ -11,7 +11,6 @@ import {
   Wifi,
   Bell,
   Database,
-  XCircle,
   Zap,
   Terminal,
 } from "lucide-react";
@@ -43,6 +42,7 @@ export default function Insights() {
 
   const socketRef = useRef(null);
   const pollRef = useRef(null);
+  const alertSoundRef = useRef(null); // 🔔 For sound effects
 
   const addToFeed = (msg) =>
     setFeed((f) => [{ id: Date.now(), text: msg }, ...f.slice(0, 15)]);
@@ -50,10 +50,33 @@ export default function Insights() {
   const addAlert = (msg) => {
     const newAlert = { id: Date.now(), text: msg };
     setAlerts((a) => [newAlert, ...a.slice(0, 9)]);
+
+    // 🔔 Play sound when new alert added
+    if (alertSoundRef.current) {
+      alertSoundRef.current.currentTime = 0;
+      alertSoundRef.current.play().catch(() => {});
+    }
+
+    // 💡 Animate new alert
     gsap.fromTo(
       `#alert-${newAlert.id}`,
-      { opacity: 0, x: 100 },
-      { opacity: 1, x: 0, duration: 0.4 }
+      { opacity: 0, x: 120, scale: 0.9 },
+      {
+        opacity: 1,
+        x: 0,
+        scale: 1,
+        duration: 0.5,
+        ease: "back.out(1.7)",
+        onComplete: () => {
+          // Pulse glow animation
+          gsap.to(`#alert-${newAlert.id}`, {
+            boxShadow: "0 0 20px 4px rgba(255,215,0,0.5)",
+            duration: 0.3,
+            yoyo: true,
+            repeat: 1,
+          });
+        },
+      }
     );
   };
 
@@ -70,7 +93,7 @@ export default function Insights() {
           exposure: data.totalExposure,
         },
       ]);
-    } catch (err) {
+    } catch {
       addAlert("❌ API call failed");
     }
   };
@@ -140,8 +163,7 @@ export default function Insights() {
         setConnectionStatus("🔴 Disconnected");
         startPolling();
       };
-    } catch (err) {
-      console.error("WebSocket setup failed:", err);
+    } catch {
       addAlert("❌ WebSocket initialization error");
       startPolling();
     }
@@ -151,15 +173,6 @@ export default function Insights() {
       stopPolling();
     };
   }, [live]);
-
-  useEffect(() => {
-    if (connectionStatus === "API Fallback" && socketRef.current?.readyState === 1) {
-      addToFeed("⚡ Reconnected via WebSocket — stopping API polling");
-      addAlert("⚡ WebSocket reconnected");
-      stopPolling();
-      setConnectionStatus("🟢 WebSocket Live");
-    }
-  }, [connectionStatus]);
 
   useEffect(() => {
     fetchRisk();
@@ -181,7 +194,14 @@ export default function Insights() {
 
   return (
     <div className="flex min-h-screen bg-gradient-to-br from-gray-50 to-blue-100 overflow-hidden">
-      {/* Sidebar fixed */}
+      {/* Alert Sound Effect */}
+      <audio
+        ref={alertSoundRef}
+        src="https://cdn.pixabay.com/download/audio/2022/03/15/audio_c6073d9263.mp3?filename=notification-113724.mp3"
+        preload="auto"
+      />
+
+      {/* Sidebar */}
       <div className="fixed top-0 left-0 h-screen z-40">
         <Sidebar />
       </div>
@@ -192,8 +212,7 @@ export default function Insights() {
           <Navbar />
         </div>
 
-        {/* Content area */}
-        <div className="p-6">
+        <div className="p-6 relative">
           <motion.h2
             initial={{ y: -20, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
@@ -336,6 +355,38 @@ export default function Insights() {
               </motion.div>
             </div>
           )}
+
+          {/* Alerts Drawer */}
+          <AnimatePresence>
+            {showNotifications && (
+              <motion.div
+                initial={{ x: 300, opacity: 0 }}
+                animate={{ x: 0, opacity: 1 }}
+                exit={{ x: 300, opacity: 0 }}
+                transition={{ duration: 0.4 }}
+                className="fixed top-24 right-6 w-80 bg-white rounded-xl shadow-2xl border border-yellow-300 z-50 p-4 overflow-y-auto max-h-[60vh]"
+              >
+                <h3 className="text-lg font-semibold text-yellow-700 flex items-center gap-2 mb-3">
+                  <Bell className="text-yellow-500" /> System Alerts
+                </h3>
+                {alerts.length > 0 ? (
+                  alerts.map((a) => (
+                    <motion.div
+                      key={a.id}
+                      id={`alert-${a.id}`}
+                      initial={{ opacity: 0, y: 15 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-800 p-2 rounded mb-2 shadow-sm text-sm"
+                    >
+                      ⚠️ {a.text}
+                    </motion.div>
+                  ))
+                ) : (
+                  <p className="text-gray-500 italic text-sm">No active alerts</p>
+                )}
+              </motion.div>
+            )}
+          </AnimatePresence>
 
           {/* Feed */}
           {showFeed && (
