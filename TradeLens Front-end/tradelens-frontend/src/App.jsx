@@ -2,7 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { useContext } from "react";
 import { AuthContext } from "./context/AuthContext";
 
-import Account from "./pages/Account";   // ✅ combined signup + login page
+import Account from "./pages/Account";  
 import Dashboard from "./pages/Dashboard";
 import Transactions from "./pages/Transactions";
 import MarketData from "./pages/MarketData";

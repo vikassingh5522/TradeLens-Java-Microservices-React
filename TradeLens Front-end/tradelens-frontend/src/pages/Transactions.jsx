@@ -1,6 +1,6 @@
 import { useState, useEffect, useContext } from "react";
 import { addTransaction, getHoldings } from "../api/portfolioApi";
-import { getLivePrice } from "../api/marketApi";
+// import { getLivePrice } from "../api/marketApi";
 import { AuthContext } from "../context/AuthContext";
 import Navbar from "../components/Navbar";
 import Sidebar from "../Components/Sidebar";
@@ -21,7 +21,6 @@ export default function Transactions() {
   const [totalProfit, setTotalProfit] = useState(0);
   const [loading, setLoading] = useState(false);
 
-  // ✅ Fetch holdings and enrich with live prices
   const fetchHoldings = async () => {
     try {
       const res = await getHoldings(token);
@@ -31,19 +30,18 @@ export default function Transactions() {
       const updated = await Promise.all(
         data.map(async (h) => {
           try {
-            const livePrice = await getLivePrice(h.symbol);
+            // const livePrice = await getLivePrice(h.symbol);
+            const livePrice = h.avgPrice; // fallback example
             const currentPrice = livePrice || h.avgPrice;
             const totalVal = currentPrice * h.quantity;
             const profit = (currentPrice - h.avgPrice) * h.quantity;
             return { ...h, currentPrice, totalVal, profit };
           } catch {
-            // fallback if live price fails
             return { ...h, currentPrice: h.avgPrice, totalVal: h.avgPrice * h.quantity, profit: 0 };
           }
         })
       );
 
-      // Update state and calculate totals
       setHoldings(updated);
       setTotalValue(updated.reduce((sum, h) => sum + h.totalVal, 0));
       setTotalProfit(updated.reduce((sum, h) => sum + h.profit, 0));
@@ -52,7 +50,6 @@ export default function Transactions() {
     }
   };
 
-  // ✅ Fetch all transactions
   const fetchTransactions = async () => {
     try {
       const res = await axios.get("http://localhost:8080/portfolio/transactions", {
@@ -72,7 +69,6 @@ export default function Transactions() {
     fetchTransactions();
   }, []);
 
-  // ✅ Add new transaction (with different messages for BUY / SELL)
   const handleAdd = async () => {
     if (!form.symbol || !form.quantity || !form.price) {
       toast.error("⚠️ Please fill in all fields before submitting.");
@@ -83,7 +79,6 @@ export default function Transactions() {
     try {
       await addTransaction(form, token);
 
-      // ✅ Custom success message
       if (form.type === "BUY") {
         toast.success(`✅ Buy transaction added successfully! (${form.symbol})`);
       } else if (form.type === "SELL") {
@@ -101,26 +96,30 @@ export default function Transactions() {
   };
 
   return (
-    <div className="flex">
-      <Sidebar />
-      <div className="flex-1">
+    <div className="flex min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 overflow-hidden">
+      {/* Sidebar Fixed */}
+      <div className="w-64 fixed h-screen bg-white shadow-md z-20">
+        <Sidebar />
+      </div>
+
+      {/* Main Content */}
+      <div className="flex-1 ml-64 overflow-y-auto h-screen">
         <Navbar />
-        <div className="p-6">
-          {/* ---------- Header ---------- */}
+        <div className="p-6 md:p-8">
           <h2 className="text-2xl font-bold mb-6 text-gray-800">
             📊 Portfolio Dashboard (Live Data)
           </h2>
 
-          {/* ---------- Portfolio Summary ---------- */}
+          {/* Summary Cards */}
           <div className="flex flex-wrap gap-4 mb-6">
-            <div className="bg-blue-100 border border-blue-400 rounded-lg p-4 flex-1 shadow-sm">
+            <div className="bg-blue-100 border border-blue-400 rounded-lg p-4 flex-1 min-w-[250px] shadow-sm">
               <h3 className="text-lg font-semibold text-blue-700">💰 Total Value</h3>
               <p className="text-2xl font-bold text-blue-800 mt-1">
                 ${totalValue.toFixed(2)}
               </p>
             </div>
 
-            <div className="bg-green-100 border border-green-400 rounded-lg p-4 flex-1 shadow-sm">
+            <div className="bg-green-100 border border-green-400 rounded-lg p-4 flex-1 min-w-[250px] shadow-sm">
               <h3 className="text-lg font-semibold text-green-700">📈 Profit / Loss</h3>
               <p
                 className={`text-2xl font-bold mt-1 ${
@@ -132,11 +131,11 @@ export default function Transactions() {
             </div>
           </div>
 
-          {/* ---------- Transaction Form ---------- */}
+          {/* Add Transaction Form */}
           <h3 className="text-xl font-semibold mb-4">Add Transaction</h3>
           <div className="flex flex-wrap gap-2 mb-8">
             <input
-              className="border p-2 rounded w-40"
+              className="border p-2 rounded w-40 sm:w-44"
               placeholder="Symbol (e.g. AAPL)"
               value={form.symbol}
               onChange={(e) =>
@@ -183,87 +182,90 @@ export default function Transactions() {
             </button>
           </div>
 
-          {/* ---------- Holdings Table ---------- */}
+          {/* Holdings Table */}
           <h3 className="text-lg font-semibold mb-2">💼 Your Holdings</h3>
           {holdings.length > 0 ? (
-            <table className="min-w-full border text-sm mb-8 shadow-md">
-              <thead className="bg-gray-200">
-                <tr>
-                  <th className="p-2 border">Symbol</th>
-                  <th className="p-2 border">Quantity</th>
-                  <th className="p-2 border">Avg Price</th>
-                  <th className="p-2 border">Live Price</th>
-                  <th className="p-2 border">Total Value</th>
-                  <th className="p-2 border">Profit / Loss</th>
-                </tr>
-              </thead>
-              <tbody>
-                {holdings.map((h, idx) => (
-                  <tr key={idx} className="text-center">
-                    <td className="p-2 border font-medium">{h.symbol}</td>
-                    <td className="p-2 border">{h.quantity}</td>
-                    <td className="p-2 border">${h.avgPrice.toFixed(2)}</td>
-                    <td className="p-2 border">
-                      ${h.currentPrice?.toFixed(2) || "-"}
-                    </td>
-                    <td className="p-2 border">${h.totalVal?.toFixed(2)}</td>
-                    <td
-                      className={`p-2 border font-semibold ${
-                        h.profit >= 0 ? "text-green-600" : "text-red-600"
-                      }`}
-                    >
-                      {h.profit >= 0 ? "+" : "-"}${Math.abs(h.profit).toFixed(2)}
-                    </td>
+            <div className="overflow-x-auto">
+              <table className="min-w-full border text-sm mb-8 shadow-md">
+                <thead className="bg-gray-200">
+                  <tr>
+                    <th className="p-2 border">Symbol</th>
+                    <th className="p-2 border">Quantity</th>
+                    <th className="p-2 border">Avg Price</th>
+                    <th className="p-2 border">Live Price</th>
+                    <th className="p-2 border">Total Value</th>
+                    <th className="p-2 border">Profit / Loss</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {holdings.map((h, idx) => (
+                    <tr key={idx} className="text-center">
+                      <td className="p-2 border font-medium">{h.symbol}</td>
+                      <td className="p-2 border">{h.quantity}</td>
+                      <td className="p-2 border">${h.avgPrice.toFixed(2)}</td>
+                      <td className="p-2 border">
+                        ${h.currentPrice?.toFixed(2) || "-"}
+                      </td>
+                      <td className="p-2 border">${h.totalVal?.toFixed(2)}</td>
+                      <td
+                        className={`p-2 border font-semibold ${
+                          h.profit >= 0 ? "text-green-600" : "text-red-600"
+                        }`}
+                      >
+                        {h.profit >= 0 ? "+" : "-"}${Math.abs(h.profit).toFixed(2)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           ) : (
             <p className="text-gray-500 italic mb-8">No holdings yet.</p>
           )}
 
-          {/* ---------- Transaction History ---------- */}
+          {/* Transaction History */}
           <h3 className="text-lg font-semibold mb-2">📜 Transaction History</h3>
           {transactions.length > 0 ? (
-            <table className="min-w-full border text-sm shadow-md">
-              <thead className="bg-gray-200">
-                <tr>
-                  <th className="p-2 border">Date</th>
-                  <th className="p-2 border">Symbol</th>
-                  <th className="p-2 border">Type</th>
-                  <th className="p-2 border">Quantity</th>
-                  <th className="p-2 border">Price</th>
-                  <th className="p-2 border">Total</th>
-                </tr>
-              </thead>
-              <tbody>
-                {transactions.map((t, idx) => (
-                  <tr key={idx} className="text-center">
-                    <td className="p-2 border">
-                      {new Date(t.timestamp).toLocaleString()}
-                    </td>
-                    <td className="p-2 border font-medium">{t.symbol}</td>
-                    <td
-                      className={`p-2 border font-semibold ${
-                        t.type === "BUY" ? "text-green-600" : "text-red-600"
-                      }`}
-                    >
-                      {t.type}
-                    </td>
-                    <td className="p-2 border">{t.quantity}</td>
-                    <td className="p-2 border">${t.price.toFixed(2)}</td>
-                    <td className="p-2 border">
-                      ${(t.price * t.quantity).toFixed(2)}
-                    </td>
+            <div className="overflow-x-auto">
+              <table className="min-w-full border text-sm shadow-md">
+                <thead className="bg-gray-200">
+                  <tr>
+                    <th className="p-2 border">Date</th>
+                    <th className="p-2 border">Symbol</th>
+                    <th className="p-2 border">Type</th>
+                    <th className="p-2 border">Quantity</th>
+                    <th className="p-2 border">Price</th>
+                    <th className="p-2 border">Total</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {transactions.map((t, idx) => (
+                    <tr key={idx} className="text-center">
+                      <td className="p-2 border">
+                        {new Date(t.timestamp).toLocaleString()}
+                      </td>
+                      <td className="p-2 border font-medium">{t.symbol}</td>
+                      <td
+                        className={`p-2 border font-semibold ${
+                          t.type === "BUY" ? "text-green-600" : "text-red-600"
+                        }`}
+                      >
+                        {t.type}
+                      </td>
+                      <td className="p-2 border">{t.quantity}</td>
+                      <td className="p-2 border">${t.price.toFixed(2)}</td>
+                      <td className="p-2 border">
+                        ${(t.price * t.quantity).toFixed(2)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           ) : (
             <p className="text-gray-500 italic">No transactions yet.</p>
           )}
         </div>
-        {/* Toast Container */}
         <ToastContainer position="top-right" autoClose={2500} />
       </div>
     </div>

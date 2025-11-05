@@ -9,7 +9,6 @@ export default function Account() {
   const { login } = useContext(AuthContext);
   const navigate = useNavigate();
 
-  // Handle signup then go to login
   const handleSignup = async () => {
     try {
       await signup(form);
@@ -21,7 +20,6 @@ export default function Account() {
     }
   };
 
-  // Handle login then go to dashboard
   const handleLogin = async () => {
     try {
       const res = await loginApi({ email: form.email, password: form.password });
