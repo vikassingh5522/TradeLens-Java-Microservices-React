@@ -3,6 +3,10 @@
 
 # 🧠 TradeLens – Java Microservices + React
 
+![working.png](../working.png)
+
+![dataflow.png](../dataflow.png)
+
 ### 🚀 Fintech Stock Portfolio Management System
 
 A full-stack **microservices-based fintech application** that simulates a real-time trading ecosystem.
